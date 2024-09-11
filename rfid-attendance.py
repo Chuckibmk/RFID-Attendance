@@ -7,7 +7,7 @@ from datetime import datetime
 
 # Connect to Arduino (adjust COM port if necessary)
 try:
-    ser = serial.Serial('COM6', 9600, timeout=1)
+    ser = serial.Serial('COM5', 9600, timeout=1)
 except serial.SerialException as e:
     print(f"Error opening serial port: {e}")
     messagebox.showerror("Serial Error", f"Could not open port: {e}")
@@ -16,7 +16,7 @@ except serial.SerialException as e:
 # Initialize empty DataFrame
 pro_df = pd.DataFrame(columns=['Name', 'UID'])
 
-auth_log = pd.DataFrame(columns=['Intern', 'Timestamp'])  # Initialize auth_log DataFrame
+auth_log = pd.DataFrame(columns=['Profile', 'Timestamp'])  # Initialize auth_log DataFrame
 
 
 # Function to read profiles from Arduino
@@ -42,6 +42,10 @@ def read_profiles():
 
             if 'START_PROFILES' in line:
                 start_marker_found = True
+                continue
+            if 'AUTH_SUCCESS' in line:
+                profile_name = line.split(',')[1]  # Extract profile name
+                log_authentication(profile_name)  # Log the authentication
                 continue
             elif 'END_PROFILES' in line:
                 break
@@ -101,7 +105,6 @@ def delete_profile(index):
 
 # listen for authentication
 def listen_for_authentication():
-    global auth_log
     while True:
         if ser.in_waiting > 0:
             line = ser.readline().decode().strip()
@@ -116,7 +119,7 @@ def listen_for_authentication():
 def log_authentication(pro_name):
     global auth_log
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    new_log = pd.DataFrame([[pro_name,timestamp]],columns=['Intern', 'Timestamp'])
+    new_log = pd.DataFrame([[pro_name,timestamp]],columns=['Profile', 'Timestamp'])
     auth_log = pd.concat([auth_log,new_log], ignore_index=True)
     print(auth_log)
     display_auth_log()
@@ -128,11 +131,11 @@ root.geometry('500x300')  # Adjusted window size
 
 # Function to display profiles in the GUI
 def display_profiles():
-    profiles = read_profiles()
+    profiles = read_profiles()    
     print(profiles)  # Debugging output to check if profiles are received
     
-    global pro_df
-    pro_df = pd.DataFrame(profiles, columns=["Name", "UID"])
+    global pro_df    
+    pro_df = pd.DataFrame(profiles, columns=["Name", "UID"])    
 
     for widget in root.winfo_children():
         widget.destroy()  # Clear previous widgets
@@ -160,6 +163,10 @@ def display_profiles():
 
 # Display authentication log
 def display_auth_log():
+    # auth = listen_for_authentication()
+    # global auth_log
+    # auth_log = pd.DataFrame(auth, columns=["Intern", "Timestamp"])
+
     for widget in root.winfo_children():
         widget.destroy() 
 
